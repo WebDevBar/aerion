@@ -31,7 +31,7 @@ Keywords[zh_HK]=郵件;電子郵件;IMAP;SMTP;CardDAV;
 Keywords[zh_TW]=郵件;電子郵件;IMAP;SMTP;CardDAV;
 Icon=io.github.hkdb.Aerion
 TryExec=aerion
-Exec=aerion %U
+Exec=env AERION_DISABLE_KEYRING=1 aerion %U
 Terminal=false
 Categories=Network;Email;
 MimeType=x-scheme-handler/mailto;
@@ -50,4 +50,4 @@ Name[nb]=Skriv ny e-post
 Name[zh_CN]=撰写新邮件
 Name[zh_HK]=撰寫新郵件
 Name[zh_TW]=撰寫新郵件
-Exec=aerion mailto:
+Exec=env AERION_DISABLE_KEYRING=1 aerion mailto:
