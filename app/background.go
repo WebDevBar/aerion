@@ -7,6 +7,7 @@ import (
 
 	"github.com/hkdb/aerion/internal/folder"
 	"github.com/hkdb/aerion/internal/imap"
+	"github.com/hkdb/aerion/internal/launcher"
 	"github.com/hkdb/aerion/internal/logging"
 	"github.com/hkdb/aerion/internal/notification"
 	"github.com/hkdb/aerion/internal/platform"
@@ -371,6 +372,15 @@ func (a *App) initNotifications(ctx context.Context) {
 	if err := a.notifier.Start(ctx); err != nil {
 		log.Warn().Err(err).Msg("Failed to start notification listener (click handling may not work)")
 	}
+
+	// Initialize the desktop taskbar unread-count badge (Unity LauncherEntry).
+	// A single subscription to folders:countsChanged keeps the badge in sync with
+	// every unread-count change (user actions, background sync, undo).
+	a.launcherBadge = launcher.New("io.github.hkdb.Aerion.desktop")
+	wailsRuntime.EventsOn(ctx, "folders:countsChanged", func(...interface{}) {
+		a.refreshLauncherBadge()
+	})
+	a.refreshLauncherBadge()
 }
 
 // ============================================================================

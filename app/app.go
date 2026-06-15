@@ -21,13 +21,14 @@ import (
 	"github.com/hkdb/aerion/internal/folder"
 	"github.com/hkdb/aerion/internal/imap"
 	"github.com/hkdb/aerion/internal/ipc"
+	"github.com/hkdb/aerion/internal/launcher"
 	"github.com/hkdb/aerion/internal/logging"
 	"github.com/hkdb/aerion/internal/message"
 	"github.com/hkdb/aerion/internal/notification"
 	"github.com/hkdb/aerion/internal/oauth2"
+	"github.com/hkdb/aerion/internal/pgp"
 	"github.com/hkdb/aerion/internal/platform"
 	"github.com/hkdb/aerion/internal/settings"
-	"github.com/hkdb/aerion/internal/pgp"
 	"github.com/hkdb/aerion/internal/smime"
 	"github.com/hkdb/aerion/internal/sync"
 	"github.com/hkdb/aerion/internal/undo"
@@ -257,7 +258,7 @@ type App struct {
 
 	// Draft IMAP sync goroutine tracking — cancel in-flight syncDraftToIMAP
 	draftSyncContexts map[string]context.CancelFunc // keyed by draft ID
-	draftSyncDone     map[string]chan struct{}       // closed when goroutine exits
+	draftSyncDone     map[string]chan struct{}      // closed when goroutine exits
 
 	// Sleep/wake detection for auto-sync on wake
 	sleepWakeMonitor platform.SleepWakeMonitor
@@ -270,6 +271,9 @@ type App struct {
 
 	// Desktop notifications with click handling
 	notifier notification.Notifier
+
+	// Desktop taskbar unread-count badge (Unity LauncherEntry on Linux)
+	launcherBadge launcher.Updater
 
 	// DebugMode function reference (injected from main)
 	debugMode func() bool
@@ -782,6 +786,11 @@ func (a *App) Shutdown(ctx context.Context) {
 	if a.notifier != nil {
 		a.notifier.Stop()
 		log.Info().Msg("Notification listener stopped")
+	}
+
+	// Close the taskbar badge updater
+	if a.launcherBadge != nil {
+		a.launcherBadge.Close()
 	}
 
 	// Stop CardDAV scheduler
