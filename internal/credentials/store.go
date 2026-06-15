@@ -4,6 +4,8 @@ package credentials
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/hkdb/aerion/internal/crypto"
 	"github.com/hkdb/aerion/internal/logging"
@@ -34,6 +36,16 @@ func NewStore(db *sql.DB, dataDir string) (*Store, error) {
 
 	// Test if keyring is available
 	keyringEnabled := testKeyring()
+
+	// Allow forcing the self-contained encrypted-database store, bypassing the OS
+	// keyring entirely. Useful where the desktop keyring is unreliable -- e.g. a
+	// KDE session whose wallet is not auto-unlocked at login (no pam_kwallet),
+	// which otherwise causes repeated password prompts. Set AERION_DISABLE_KEYRING=1.
+	if keyringDisabledByEnv() {
+		keyringEnabled = false
+		log.Info().Msg("AERION_DISABLE_KEYRING set; using encrypted database storage")
+	}
+
 	if keyringEnabled {
 		log.Info().Msg("OS keyring available, using as primary credential storage")
 	} else {
@@ -63,6 +75,17 @@ func testKeyring() bool {
 	_ = gokeyring.Delete(serviceName, testKey)
 
 	return true
+}
+
+// keyringDisabledByEnv reports whether AERION_DISABLE_KEYRING requests that the
+// OS keyring be bypassed in favour of the encrypted-database store.
+func keyringDisabledByEnv() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("AERION_DISABLE_KEYRING"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 // SetPassword stores a password for an account
